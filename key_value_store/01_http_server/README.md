@@ -1,6 +1,6 @@
 # 01_http_server
 
-Creates an HTTP server that can handle `GET`, `PUT` and `DELETE` requests of key value pairs on a concurrency-safe map.
+Creates an HTTP server that can handle `PUT`, `GET`, and `DELETE` requests of key value pairs on a concurrency-safe map.
 
 ## Usage
 
