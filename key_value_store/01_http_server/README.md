@@ -12,19 +12,19 @@ $ go run main.go
 
 In other terminal sessions issue requests:
 
-### `PUT`
+`PUT`
 
 ```shell
 $ curl 'localhost:3000/put?key=test_key&value=test_value'
 ```
 
-### `GET`
+`GET`
 
 ```shell
 $ curl 'localhost:3000/get?key=test_key'
 ```
 
-### `DELETE`
+`DELETE`
 
 ```shell
 $ curl 'localhost:3000/delete?key=test_key'
