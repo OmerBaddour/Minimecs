@@ -24,21 +24,21 @@ type KeyValueWorkerResponse struct {
 	Value string
 }
 
-func keyValueWorker(requestChannel chan KeyValueWorkerRequest, responseChannel chan KeyValueWorkerResponse) {
-	partition := make(map[string]string)
-	fmt.Println("keyValueWorker: Activated partition")
+func keyValueWorker(requestChannel chan KeyValueWorkerRequest, responseChannel chan KeyValueWorkerResponse, partitionNumber int) {
+	keyValueStore := make(map[string]string)
+	fmt.Printf("keyValueWorker %d: Activated partition\n", partitionNumber)
 	
 	for {
 		request := <- requestChannel
-		fmt.Println("keyValueWorker: Received request", request.Method, request.Key, request.Value)
+		fmt.Printf("keyValueWorker %d: Received request: method: %s, key: %s, value: %s\n", partitionNumber, request.Method, request.Key, request.Value)
 
 		response := KeyValueWorkerResponse{}
 		switch request.Method {
 		case "put":
-			partition[request.Key] = request.Value
+			keyValueStore[request.Key] = request.Value
 			response.Status = "201 Created"
 		case "get":
-			value, ok := partition[request.Key]
+			value, ok := keyValueStore[request.Key]
 			if ok {
 				response.Status = "200 Found"
 				response.Value = value
@@ -46,10 +46,10 @@ func keyValueWorker(requestChannel chan KeyValueWorkerRequest, responseChannel c
 				response.Status = "404 Not Found"
 			}
 		case "delete":
-			delete(partition, request.Key)
+			delete(keyValueStore, request.Key)
 			response.Status = "204 Deleted Key"
 		}
-		fmt.Println("keyValueWorker: Sending response", response.Status, response.Value)
+		fmt.Printf("keyValueWorker %d: Sending response: status: %s, value: %s\n", partitionNumber, response.Status, response.Value)
 		responseChannel <- response
 	}
 }
@@ -77,10 +77,10 @@ func (handler *HttpHandler) handleTransaction(method string, key string, value s
 		Value: value,
 	}
 	index := getPartitionIndex(key)
-	fmt.Println("HttpHandler: Sending request to request channel", request)
+	fmt.Printf("HttpHandler: Sending request to worker %d\n", index)
 	handler.RequestChannels[index] <- request
 	response := <- handler.ResponseChannels[index]
-	fmt.Println("HttpHandler: Received response from response channel", response)
+	fmt.Printf("HttpHandler: Received response from worker %d\n", index)
 	return response.Status, response.Value
 }
 
@@ -127,7 +127,7 @@ func main() {
 	for i := 0; i < NUM_PARTITIONS; i++ {
 		handler.RequestChannels[i] = make(chan KeyValueWorkerRequest)
 		handler.ResponseChannels[i] = make(chan KeyValueWorkerResponse)
-		go keyValueWorker(handler.RequestChannels[i], handler.ResponseChannels[i])
+		go keyValueWorker(handler.RequestChannels[i], handler.ResponseChannels[i], i)
 	}
 
 	http.HandleFunc("/put", handler.httpPut)
