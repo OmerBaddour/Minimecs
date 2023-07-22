@@ -2,29 +2,35 @@ package key_value_worker
 
 import (
 	"fmt"
-	
+
 	"github.com/OmerBaddour/Minimecs/key_value_store/02_partitioned/common"
 )
 
-/****************************\
-  Key value worker functions 
-\****************************/
+/*********************************\
+  Key value worker implementation
+\*********************************/
 
-func KeyValueWorker(requestChannel chan common.KeyValueWorkerRequest, responseChannel chan common.KeyValueWorkerResponse, partitionNumber int) {
-	keyValueStore := make(map[string]string)
-	fmt.Printf("KeyValueWorker %d: Activated partition\n", partitionNumber)
-	
+type KeyValueWorker struct {
+	KeyValueStore map[string]string
+	RequestChannel chan common.KeyValueWorkerRequest
+	ResponseChannel chan common.KeyValueWorkerResponse
+	PartitionNumber int
+}
+
+func (worker *KeyValueWorker) DoWork() {
+	fmt.Printf("KeyValueWorker %d: Activated partition\n", worker.PartitionNumber)
+
 	for {
-		request := <- requestChannel
-		fmt.Printf("KeyValueWorker %d: Received request: method: %s, key: %s, value: %s\n", partitionNumber, request.Method, request.Key, request.Value)
+		request := <- worker.RequestChannel
+		fmt.Printf("KeyValueWorker %d: Received request: method: %s, key: %s, value: %s\n", worker.PartitionNumber, request.Method, request.Key, request.Value)
 
 		response := common.KeyValueWorkerResponse{}
 		switch request.Method {
 		case "put":
-			keyValueStore[request.Key] = request.Value
+			worker.KeyValueStore[request.Key] = request.Value
 			response.Status = "201 Created"
 		case "get":
-			value, ok := keyValueStore[request.Key]
+			value, ok := worker.KeyValueStore[request.Key]
 			if ok {
 				response.Status = "200 Found"
 				response.Value = value
@@ -32,10 +38,10 @@ func KeyValueWorker(requestChannel chan common.KeyValueWorkerRequest, responseCh
 				response.Status = "404 Not Found"
 			}
 		case "delete":
-			delete(keyValueStore, request.Key)
+			delete(worker.KeyValueStore, request.Key)
 			response.Status = "204 Deleted Key"
 		}
-		fmt.Printf("KeyValueWorker %d: Sending response: status: %s, value: %s\n", partitionNumber, response.Status, response.Value)
-		responseChannel <- response
+		fmt.Printf("KeyValueWorker %d: Sending response: status: %s, value: %s\n", worker.PartitionNumber, response.Status, response.Value)
+		worker.ResponseChannel <- response
 	}
 }

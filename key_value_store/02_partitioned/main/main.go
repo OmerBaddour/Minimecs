@@ -2,7 +2,7 @@ package main
 
 import (
 	"net/http"
-	
+
 	"github.com/OmerBaddour/Minimecs/key_value_store/02_partitioned/common"
 	ws "github.com/OmerBaddour/Minimecs/key_value_store/02_partitioned/web_server"
 	kvw "github.com/OmerBaddour/Minimecs/key_value_store/02_partitioned/key_value_worker"
@@ -20,7 +20,13 @@ func main() {
 	for i := 0; i < common.NUM_PARTITIONS; i++ {
 		handler.RequestChannels[i] = make(chan common.KeyValueWorkerRequest)
 		handler.ResponseChannels[i] = make(chan common.KeyValueWorkerResponse)
-		go kvw.KeyValueWorker(handler.RequestChannels[i], handler.ResponseChannels[i], i)
+		key_value_worker := &kvw.KeyValueWorker{
+			KeyValueStore: make(map[string]string),
+			RequestChannel: handler.RequestChannels[i],
+			ResponseChannel: handler.ResponseChannels[i],
+			PartitionNumber: i,
+		}
+		go key_value_worker.DoWork()
 	}
 
 	http.HandleFunc("/put", handler.HttpPut)
